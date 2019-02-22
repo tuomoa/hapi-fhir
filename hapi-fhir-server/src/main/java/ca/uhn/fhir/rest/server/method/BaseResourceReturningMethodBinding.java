@@ -117,7 +117,7 @@ public abstract class BaseResourceReturningMethodBinding extends BaseMethodBindi
 		if (theServer.getPagingProvider() == null) {
 			numToReturn = numTotalResults;
 			if (numToReturn > 0) {
-				resourceList = theResult.getResources(0, numToReturn);
+				resourceList = theResult.getResources(0, theLimit);
 			} else {
 				resourceList = Collections.emptyList();
 			}

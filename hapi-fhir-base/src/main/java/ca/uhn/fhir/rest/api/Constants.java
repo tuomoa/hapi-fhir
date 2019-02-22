@@ -135,6 +135,7 @@ public class Constants {
 	public static final String PARAM_BUNDLETYPE = "_bundletype";
 	public static final String PARAM_CONTENT = "_content";
 	public static final String PARAM_COUNT = "_count";
+	public static final String PARAM_OFFSET = "_offset";
 	public static final String PARAM_DELETE = "_delete";
 	public static final String PARAM_ELEMENTS = "_elements";
 	public static final String PARAM_ELEMENTS_EXCLUDE_MODIFIER = ":exclude";

@@ -1499,7 +1499,7 @@ public class SearchBuilder implements ISearchBuilder {
 		myBuilder = myEntityManager.getCriteriaBuilder();
 		mySearchUuid = theSearchUuid;
 
-		TypedQuery<Long> query = createQuery(null, null, true);
+		TypedQuery<Long> query = createQuery(null, null, null, true);
 		return new CountQueryIterator(query);
 	}
 
@@ -1575,7 +1575,7 @@ public class SearchBuilder implements ISearchBuilder {
 		return new QueryIterator();
 	}
 
-	private TypedQuery<Long> createQuery(SortSpec sort, Integer theMaximumResults, boolean theCount) {
+	private TypedQuery<Long> createQuery(SortSpec sort, Integer offset, Integer theMaximumResults, boolean theCount) {
 		myPredicates = new ArrayList<>();
 
 		CriteriaQuery<Long> outerQuery;
@@ -1717,7 +1717,7 @@ public class SearchBuilder implements ISearchBuilder {
 		 * Now perform the search
 		 */
 		final TypedQuery<Long> query = myEntityManager.createQuery(outerQuery);
-
+		query.setFirstResult(offset);
 		if (theMaximumResults != null) {
 			query.setMaxResults(theMaximumResults);
 		}
@@ -2397,6 +2397,7 @@ public class SearchBuilder implements ISearchBuilder {
 		private Long myNext;
 		private Iterator<Long> myPreResultsIterator;
 		private Iterator<Long> myResultsIterator;
+		private Integer myOffset;
 		private SortSpec mySort;
 		private boolean myStillNeedToFetchIncludes;
 		private StopWatch myStopwatch = null;
@@ -2404,6 +2405,7 @@ public class SearchBuilder implements ISearchBuilder {
 
 		private QueryIterator() {
 			mySort = myParams.getSort();
+			myOffset = myParams.getOffset();
 
 			// Includes are processed inline for $everything query
 			if (myParams.getEverythingMode() != null) {
@@ -2422,7 +2424,7 @@ public class SearchBuilder implements ISearchBuilder {
 				if (myMaxResultsToFetch == null) {
 					myMaxResultsToFetch = myDaoConfig.getFetchSizeDefaultMaximum();
 				}
-				final TypedQuery<Long> query = createQuery(mySort, myMaxResultsToFetch, false);
+				final TypedQuery<Long> query = createQuery(mySort, myOffset, myMaxResultsToFetch, false);
 
 				Query<Long> hibernateQuery = (Query<Long>) query;
 				hibernateQuery.setFetchSize(myFetchSize);
