@@ -59,7 +59,7 @@ public class SearchCoordinatorSvcImplTest {
 	private IFhirResourceDao<?> myCallingDao;
 	@Mock
 	private EntityManager myEntityManager;
-	private int myExpectedNumberOfSearchBuildersCreated = 2;
+	private int myExpectedNumberOfSearchBuildersCreated = 3;
 	@Mock
 	private ISearchBuilder mySearchBuider;
 	@Mock
@@ -240,6 +240,31 @@ public class SearchCoordinatorSvcImplTest {
 
 	}
 
+	@Test
+	public void testAsyncSearchLargeResultSetSameCoordinatorWithOffset() {
+		SearchParameterMap params = new SearchParameterMap();
+		params.add("name", new StringParam("ANAME"));
+		params.setOffset(10);
+		params.setCount(10);
+
+		SlowIterator iter = new SlowIterator(createPidSequence(20, 30).iterator(), 2);
+		when(mySearchBuider.createCountQuery(Mockito.same(params), any(String.class))).thenReturn(Lists.newArrayList(Long.valueOf(10L)).iterator());
+		when(mySearchBuider.createQuery(Mockito.same(params), any(String.class))).thenReturn(iter);
+
+		doAnswer(loadPids()).when(mySearchBuider).loadResourcesByPid(any(List.class), any(List.class), any(Set.class), anyBoolean(), any(EntityManager.class), any(FhirContext.class), same(myCallingDao));
+
+		IBundleProvider result = mySvc.registerSearch(myCallingDao, params, "Patient", new CacheControlDirective());
+		assertNotNull(result.getUuid());
+		assertEquals(10, result.size().intValue());
+
+		List<IBaseResource> resources;
+
+		resources = result.getResources(0, 10);
+		assertEquals(10, resources.size());
+		assertEquals("20", resources.get(0).getIdElement().getValueAsString());
+		assertEquals("29", resources.get(9).getIdElement().getValueAsString());
+	}
+
 	/**
 	 * Subsequent requests for the same search (i.e. a request for the next
 	 * page) within the same JVM will not use the original bundle provider
@@ -396,6 +421,29 @@ public class SearchCoordinatorSvcImplTest {
 		assertEquals(790, resources.size());
 		assertEquals("10", resources.get(0).getIdElement().getValueAsString());
 		assertEquals("799", resources.get(789).getIdElement().getValueAsString());
+	}
+
+	@Test
+	public void testSynchronousSearchWithOffset() {
+		SearchParameterMap params = new SearchParameterMap();
+		params.setLoadSynchronous(true);
+		params.add("name", new StringParam("ANAME"));
+		params.setCount(10);
+		params.setOffset(10);
+
+		List<Long> pids = createPidSequence(20, 30);
+		when(mySearchBuider.createCountQuery(Mockito.same(params), any(String.class))).thenReturn(Lists.newArrayList(Long.valueOf(10L)).iterator());
+		when(mySearchBuider.createQuery(Mockito.same(params), any(String.class))).thenReturn(new ResultIterator(pids.iterator()));
+
+		doAnswer(loadPids()).when(mySearchBuider).loadResourcesByPid(eq(pids), any(List.class), any(Set.class), anyBoolean(), any(EntityManager.class), any(FhirContext.class), same(myCallingDao));
+
+		IBundleProvider result = mySvc.registerSearch(myCallingDao, params, "Patient", new CacheControlDirective());
+		assertNull(result.getUuid());
+		assertEquals(10, result.size().intValue());
+
+		List<IBaseResource> resources = result.getResources(0, 10);
+		assertEquals(10, resources.size());
+		assertEquals("20", resources.get(0).getIdElement().getValueAsString());
 	}
 
 	@Test

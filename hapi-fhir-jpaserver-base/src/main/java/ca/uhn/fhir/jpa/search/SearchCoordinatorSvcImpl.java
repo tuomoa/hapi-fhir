@@ -289,6 +289,14 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 			txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
 			return txTemplate.execute(t -> {
 
+				Long count = 0L;
+				if (theParams.getOffset() != null) {
+					ourLog.trace("Performing count");
+					Iterator<Long> countIterator = sb.createCountQuery(theParams, searchUuid);
+					count = countIterator.next();
+					ourLog.trace("Got count {}", count);
+				}
+
 				// Load the results synchronously
 				final List<Long> pids = new ArrayList<>();
 
@@ -318,7 +326,14 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 
 				List<IBaseResource> resources = new ArrayList<>();
 				sb.loadResourcesByPid(pids, resources, includedPids, false, myEntityManager, myContext, theCallingDao);
-				return new SimpleBundleProvider(resources);
+
+				SimpleBundleProvider bundleProvider = new SimpleBundleProvider(resources);
+
+				if (theParams.getOffset() != null) {
+					bundleProvider.setSize(count.intValue());
+				}
+
+				return bundleProvider;
 			});
 		}
 
@@ -601,7 +616,10 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 						if (theResultIter.hasNext() == false) {
 							mySearch.setNumFound(myCountSaved);
 							int loadedCountThisPass = theResultIter.getSkippedCount() + myCountSaved;
-							if (myMaxResultsToFetch != null && loadedCountThisPass < myMaxResultsToFetch) {
+							// For offset searches total count is updated with the count query, update only status
+							if (myParams.getOffset() != null && myMaxResultsToFetch != null && loadedCountThisPass <= myMaxResultsToFetch) {
+								mySearch.setStatus(SearchStatusEnum.FINISHED);
+							} else if (myMaxResultsToFetch != null && loadedCountThisPass < myMaxResultsToFetch) {
 								mySearch.setStatus(SearchStatusEnum.FINISHED);
 								mySearch.setTotalCount(myCountSaved);
 							} else if (myAdditionalPrefetchThresholdsRemaining) {
@@ -762,7 +780,7 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 			 * before doing anything else.
 			 */
 			boolean wantOnlyCount = SummaryEnum.COUNT.equals(myParams.getSummaryMode());
-			boolean wantCount = wantOnlyCount || SearchTotalModeEnum.ACCURATE.equals(myParams.getSearchTotalMode());
+			boolean wantCount = wantOnlyCount || myParams.getOffset() != null || SearchTotalModeEnum.ACCURATE.equals(myParams.getSearchTotalMode());
 			if (wantCount) {
 				ourLog.trace("Performing count");
 				ISearchBuilder sb = newSearchBuilder();
@@ -800,7 +818,9 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 			int minWanted = 0;
 			if (myParams.getCount() != null) {
 				minWanted = myParams.getCount();
-				minWanted = Math.max(minWanted, myPagingProvider.getMaximumPageSize());
+				if (myParams.getOffset() == null) {
+					minWanted = Math.max(minWanted, myPagingProvider.getMaximumPageSize());
+				}
 				minWanted += currentlyLoaded;
 			}
 
@@ -813,7 +833,15 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 				if (next == -1) {
 					sb.setMaxResultsToFetch(null);
 				} else {
-					myMaxResultsToFetch = Math.max(next, minWanted);
+					if (myParams.getOffset() != null) {
+						if (minWanted == 0) {
+							myMaxResultsToFetch = myPagingProvider.getDefaultPageSize();
+						} else {
+							myMaxResultsToFetch = minWanted;
+						}
+					} else {
+						myMaxResultsToFetch = Math.max(next, minWanted);
+					}
 					sb.setMaxResultsToFetch(myMaxResultsToFetch);
 				}
 

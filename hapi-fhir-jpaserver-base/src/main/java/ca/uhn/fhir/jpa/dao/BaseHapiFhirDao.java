@@ -2086,6 +2086,18 @@ public abstract class BaseHapiFhirDao<T extends IBaseResource> implements IDao, 
 				continue;
 			}
 
+			if (Constants.PARAM_OFFSET.equals(nextParamName)) {
+				if (paramList.size() > 0 && paramList.get(0).size() > 0) {
+					String intString = paramList.get(0).get(0);
+					try {
+						paramMap.setOffset(Integer.parseInt(intString));
+					} catch (NumberFormatException e) {
+						throw new InvalidRequestException("Invalid " + Constants.PARAM_OFFSET + " value: " + intString);
+					}
+				}
+				continue;
+			}
+
 			if (RESOURCE_META_PARAMS.containsKey(nextParamName)) {
 				if (isNotBlank(paramList.get(0).getQualifier()) && paramList.get(0).getQualifier().startsWith(".")) {
 					throw new InvalidRequestException("Invalid parameter chain: " + nextParamName + paramList.get(0).getQualifier());
