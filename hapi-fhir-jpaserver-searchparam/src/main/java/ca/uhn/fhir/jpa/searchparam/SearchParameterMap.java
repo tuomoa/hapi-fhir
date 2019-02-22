@@ -51,6 +51,7 @@ public class SearchParameterMap implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private Integer myCount;
+	private Integer myOffset;
 	private EverythingModeEnum myEverythingMode = null;
 	private Set<Include> myIncludes;
 	private DateRangeParam myLastUpdated;
@@ -196,6 +197,14 @@ public class SearchParameterMap implements Serializable {
 
 	public void setCount(Integer theCount) {
 		myCount = theCount;
+	}
+
+	public Integer getOffset() {
+		return myOffset;
+	}
+
+	public void setOffset(Integer theOffset) {
+		myOffset = theOffset;
 	}
 
 	public EverythingModeEnum getEverythingMode() {
@@ -459,6 +468,13 @@ public class SearchParameterMap implements Serializable {
 			b.append(Constants.PARAM_COUNT);
 			b.append('=');
 			b.append(getCount());
+		}
+
+		if (getOffset() != null) {
+			addUrlParamSeparator(b);
+			b.append(Constants.PARAM_OFFSET);
+			b.append('=');
+			b.append(getOffset());
 		}
 
 		// Summary mode (_summary)

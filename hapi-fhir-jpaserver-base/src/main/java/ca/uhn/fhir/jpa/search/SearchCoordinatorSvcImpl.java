@@ -463,11 +463,20 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 		TransactionTemplate txTemplate = new TransactionTemplate(myManagedTxManager);
 		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
 		return txTemplate.execute(t -> {
-
+				
 			// Load the results synchronously
 			final List<ResourcePersistentId> pids = new ArrayList<>();
 
 			RequestPartitionId requestPartitionId = myRequestPartitionHelperService.determineReadPartitionForRequest(theRequestDetails, theResourceType);
+
+			Long count = 0L;
+			if (theParams.getOffset() != null) {
+				ourLog.trace("Performing count");
+				Iterator<Long> countIterator = theSb.createCountQuery(theParams, theSearchUuid, theRequestDetails, requestPartitionId);
+				count = countIterator.next();
+				ourLog.trace("Got count {}", count);
+			}
+
 			try (IResultIterator resultIter = theSb.createQuery(theParams, searchRuntimeDetails, theRequestDetails, requestPartitionId)) {
 				while (resultIter.hasNext()) {
 					pids.add(resultIter.next());
@@ -516,7 +525,13 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 			// Hook: STORAGE_PRESHOW_RESOURCES
 			resources = InterceptorUtil.fireStoragePreshowResource(resources, theRequestDetails, myInterceptorBroadcaster);
 
-			return new SimpleBundleProvider(resources);
+			SimpleBundleProvider bundleProvider = new SimpleBundleProvider(resources);
+
+			if (theParams.getOffset() != null) {
+				bundleProvider.setSize(count.intValue());
+			}
+
+			return bundleProvider;
 		});
 	}
 
@@ -810,7 +825,10 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 							int totalFetched = skippedCount + myCountSavedThisPass + myCountBlockedThisPass;
 							ourLog.trace("MaxToFetch[{}] SkippedCount[{}] CountSavedThisPass[{}] CountSavedThisTotal[{}] AdditionalPrefetchRemaining[{}]", myMaxResultsToFetch, skippedCount, myCountSavedThisPass, myCountSavedTotal, myAdditionalPrefetchThresholdsRemaining);
 
-							if (nonSkippedCount == 0 || (myMaxResultsToFetch != null && totalFetched < myMaxResultsToFetch)) {
+							// For offset searches total count is updated with the count query, update only status
+							if (myParams.getOffset() != null && myMaxResultsToFetch != null && totalFetched <= myMaxResultsToFetch) {
+								mySearch.setStatus(SearchStatusEnum.FINISHED);
+							} else if (nonSkippedCount == 0 || (myMaxResultsToFetch != null && totalFetched < myMaxResultsToFetch)) {
 								ourLog.trace("Setting search status to FINISHED");
 								mySearch.setStatus(SearchStatusEnum.FINISHED);
 								mySearch.setTotalCount(myCountSavedTotal - countBlocked);
@@ -995,7 +1013,7 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 				SummaryEnum.COUNT.equals(myParams.getSummaryMode())
 					| INTEGER_0.equals(myParams.getCount());
 			boolean wantCount =
-				wantOnlyCount ||
+				wantOnlyCount || myParams.getOffset() != null ||
 					SearchTotalModeEnum.ACCURATE.equals(myParams.getSearchTotalMode()) ||
 					(myParams.getSearchTotalMode() == null && SearchTotalModeEnum.ACCURATE.equals(myDaoConfig.getDefaultTotalMode()));
 			if (wantCount) {
@@ -1034,7 +1052,9 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 			int minWanted = 0;
 			if (myParams.getCount() != null) {
 				minWanted = myParams.getCount();
-				minWanted = Math.max(minWanted, myPagingProvider.getMaximumPageSize());
+				if (myParams.getOffset() == null) {
+					minWanted = Math.max(minWanted, myPagingProvider.getMaximumPageSize());
+				}
 				minWanted += currentlyLoaded;
 			}
 
@@ -1047,7 +1067,15 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 				if (next == -1) {
 					sb.setMaxResultsToFetch(null);
 				} else {
-					myMaxResultsToFetch = Math.max(next, minWanted);
+					if (myParams.getOffset() != null) {
+						if (minWanted == 0) {
+							myMaxResultsToFetch = myPagingProvider.getDefaultPageSize();
+						} else {
+							myMaxResultsToFetch = minWanted;
+						}
+					} else {
+						myMaxResultsToFetch = Math.max(next, minWanted);
+					}
 					sb.setMaxResultsToFetch(myMaxResultsToFetch);
 				}
 
