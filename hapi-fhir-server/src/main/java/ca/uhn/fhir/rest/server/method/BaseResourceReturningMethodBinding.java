@@ -136,14 +136,18 @@ public abstract class BaseResourceReturningMethodBinding extends BaseMethodBindi
 					numToReturn = theServer.getDefaultPageSize();
 				} else {
 					if (theServer.getMaximumPageSize() != null) {
-						numToReturn = Math.min(numTotalResults, theServer.getMaximumPageSize());
+						if (numTotalResults != null) {
+							numToReturn = Math.min(numTotalResults, theServer.getMaximumPageSize());
+						} else {
+							numToReturn = theServer.getMaximumPageSize();
+						}
 					} else {
 						// No limit given, no server default, no maximum, return all
 						numToReturn = numTotalResults;
 					}
 				}
 			}
-			if (numTotalResults > 0) {
+			if (numToReturn > 0) {
 				resourceList = theResult.getResources(0, numToReturn);
 			} else {
 				resourceList = Collections.emptyList();
