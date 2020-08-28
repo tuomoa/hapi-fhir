@@ -75,14 +75,6 @@ public interface IRestfulServerDefaults {
 	IPagingProvider getPagingProvider();
 
 	/**
-	 * Use stateless paging by default. Default is false. NOTE that if you want to use stateful paging, you need to
-	 * define a paging provider.
-	 */
-	default boolean isStatelessPagingDefault() {
-		return false;
-	}
-
-	/**
 	 * Default page size for searches. Null means no limit (DaoConfig might have size limit however)
 	 */
 	default Integer getDefaultPageSize() {

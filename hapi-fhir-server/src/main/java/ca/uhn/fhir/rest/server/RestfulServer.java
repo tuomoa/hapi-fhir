@@ -701,18 +701,6 @@ public class RestfulServer extends HttpServlet implements IRestfulServer<Servlet
 		myMaximumPageSize = theMaximumPageSize;
 	}
 
-	@Override
-	public boolean isStatelessPagingDefault() {
-		return myStatelessPagingDefault;
-	}
-
-	/**
-	 * Sets the stateless paging default.
-	 */
-	public void setStatelessPagingDefault(boolean theStatelessPagingDefault) {
-		myStatelessPagingDefault = theStatelessPagingDefault;
-	}
-
 	/**
 	 * Provides the non-resource specific providers which implement method calls on this server
 	 *
