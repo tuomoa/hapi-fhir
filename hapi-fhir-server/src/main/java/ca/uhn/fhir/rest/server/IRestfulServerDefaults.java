@@ -75,6 +75,16 @@ public interface IRestfulServerDefaults {
 	IPagingProvider getPagingProvider();
 
 	/**
+	 * Default page size for searches. Null means no limit (DaoConfig might have size limit however)
+	 */
+	Integer getDefaultPageSize();
+
+	/**
+	 * Maximum page size for searches. Null means no upper limit.
+	 */
+	Integer getMaximumPageSize();
+
+	/**
 	 * Should the server "pretty print" responses by default (requesting clients can always override this default by
 	 * supplying an <code>Accept</code> header in the request, or a <code>_pretty</code>
 	 * parameter in the request URL.

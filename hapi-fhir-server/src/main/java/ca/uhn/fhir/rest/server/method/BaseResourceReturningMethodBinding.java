@@ -125,7 +125,24 @@ public abstract class BaseResourceReturningMethodBinding extends BaseMethodBindi
 		Integer numTotalResults = theResult.size();
 
 		if (theServer.getPagingProvider() == null) {
-			numToReturn = theLimit != null ? theLimit : numTotalResults;
+			if (theLimit != null) {
+				if (theServer.getMaximumPageSize() != null) {
+					numToReturn = Math.min(theLimit, theServer.getMaximumPageSize());
+				} else {
+					numToReturn = theLimit;
+				}
+			} else {
+				if (theServer.getDefaultPageSize() != null) {
+					numToReturn = theServer.getDefaultPageSize();
+				} else {
+					if (theServer.getMaximumPageSize() != null) {
+						numToReturn = Math.min(numTotalResults, theServer.getMaximumPageSize());
+					} else {
+						// No limit given, no server default, no maximum, return all
+						numToReturn = numTotalResults;
+					}
+				}
+			}
 			if (numTotalResults > 0) {
 				resourceList = theResult.getResources(0, numToReturn);
 			} else {
@@ -202,14 +219,15 @@ public abstract class BaseResourceReturningMethodBinding extends BaseMethodBindi
 		String linkPrev = null;
 		String linkNext = null;
 
-		if (offset != null) {
-			// Paging without id
+		if (theServer.getPagingProvider() == null || offset != null) {
+			int myOffset = offset != null ? offset : 0;
+			// Paging without caching
 			// We're doing offset pages
-			if (numTotalResults == null || offset + numToReturn < numTotalResults) {
-				linkNext = (RestfulServerUtils.createOffsetPagingLink(serverBase, theRequest.getRequestPath(), theRequest.getTenantId(), offset + numToReturn, numToReturn, theRequest.getParameters()));
+			if (numTotalResults == null || myOffset + numToReturn < numTotalResults) {
+				linkNext = (RestfulServerUtils.createOffsetPagingLink(serverBase, theRequest.getRequestPath(), theRequest.getTenantId(), myOffset + numToReturn, numToReturn, theRequest.getParameters()));
 			}
-			if (offset > 0) {
-				int start = Math.max(0, offset - numToReturn);
+			if (myOffset > 0) {
+				int start = Math.max(0, myOffset - numToReturn);
 				linkPrev = RestfulServerUtils.createOffsetPagingLink(serverBase, theRequest.getRequestPath(), theRequest.getTenantId(), start, numToReturn, theRequest.getParameters());
 			}
 		} else if (isNotBlank(theResult.getCurrentPageId())) {

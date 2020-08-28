@@ -459,6 +459,9 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 		SearchRuntimeDetails searchRuntimeDetails = new SearchRuntimeDetails(theRequestDetails, theSearchUuid);
 		searchRuntimeDetails.setLoadSynchronous(true);
 
+		boolean wantOnlyCount = isWantOnlyCount(theParams);
+		boolean wantCount = isWantCount(theParams, wantOnlyCount);
+
 		// Execute the query and make sure we return distinct results
 		TransactionTemplate txTemplate = new TransactionTemplate(myManagedTxManager);
 		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
@@ -470,7 +473,7 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 			RequestPartitionId requestPartitionId = myRequestPartitionHelperService.determineReadPartitionForRequest(theRequestDetails, theResourceType);
 
 			Long count = 0L;
-			if (theParams.getOffset() != null) {
+			if (wantCount) {
 				ourLog.trace("Performing count");
 				Iterator<Long> countIterator = theSb.createCountQuery(theParams, theSearchUuid, theRequestDetails, requestPartitionId);
 				count = countIterator.next();
@@ -527,7 +530,7 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 
 			SimpleBundleProvider bundleProvider = new SimpleBundleProvider(resources);
 
-			if (theParams.getOffset() != null) {
+			if (wantCount) {
 				bundleProvider.setSize(count.intValue());
 			}
 
@@ -1009,13 +1012,8 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 			 *
 			 * before doing anything else.
 			 */
-			boolean wantOnlyCount =
-				SummaryEnum.COUNT.equals(myParams.getSummaryMode())
-					| INTEGER_0.equals(myParams.getCount());
-			boolean wantCount =
-				wantOnlyCount || myParams.getOffset() != null ||
-					SearchTotalModeEnum.ACCURATE.equals(myParams.getSearchTotalMode()) ||
-					(myParams.getSearchTotalMode() == null && SearchTotalModeEnum.ACCURATE.equals(myDaoConfig.getDefaultTotalMode()));
+			boolean wantOnlyCount = isWantOnlyCount(myParams);
+			boolean wantCount = isWantCount(myParams, wantOnlyCount);
 			if (wantCount) {
 				ourLog.trace("Performing count");
 				ISearchBuilder sb = newSearchBuilder();
@@ -1152,8 +1150,20 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 				throw new InternalErrorException(e);
 			}
 		}
+
+
 	}
 
+	private boolean isWantCount(SearchParameterMap myParams, boolean wantOnlyCount) {
+		return wantOnlyCount ||
+			SearchTotalModeEnum.ACCURATE.equals(myParams.getSearchTotalMode()) ||
+			(myParams.getSearchTotalMode() == null && SearchTotalModeEnum.ACCURATE.equals(myDaoConfig.getDefaultTotalMode()));
+	}
+
+	private static boolean isWantOnlyCount(SearchParameterMap myParams) {
+		return SummaryEnum.COUNT.equals(myParams.getSummaryMode())
+			| INTEGER_0.equals(myParams.getCount());
+	}
 
 	public class SearchContinuationTask extends SearchTask {
 
