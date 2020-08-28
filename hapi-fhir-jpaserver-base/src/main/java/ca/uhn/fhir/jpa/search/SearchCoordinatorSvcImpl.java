@@ -829,9 +829,7 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 							ourLog.trace("MaxToFetch[{}] SkippedCount[{}] CountSavedThisPass[{}] CountSavedThisTotal[{}] AdditionalPrefetchRemaining[{}]", myMaxResultsToFetch, skippedCount, myCountSavedThisPass, myCountSavedTotal, myAdditionalPrefetchThresholdsRemaining);
 
 							// For offset searches total count is updated with the count query, update only status
-							if (myParams.getOffset() != null && myMaxResultsToFetch != null && totalFetched <= myMaxResultsToFetch) {
-								mySearch.setStatus(SearchStatusEnum.FINISHED);
-							} else if (nonSkippedCount == 0 || (myMaxResultsToFetch != null && totalFetched < myMaxResultsToFetch)) {
+							if (nonSkippedCount == 0 || (myMaxResultsToFetch != null && totalFetched < myMaxResultsToFetch)) {
 								ourLog.trace("Setting search status to FINISHED");
 								mySearch.setStatus(SearchStatusEnum.FINISHED);
 								mySearch.setTotalCount(myCountSavedTotal - countBlocked);
@@ -1050,9 +1048,7 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 			int minWanted = 0;
 			if (myParams.getCount() != null) {
 				minWanted = myParams.getCount();
-				if (myParams.getOffset() == null) {
-					minWanted = Math.max(minWanted, myPagingProvider.getMaximumPageSize());
-				}
+				minWanted = Math.max(minWanted, myPagingProvider.getMaximumPageSize());
 				minWanted += currentlyLoaded;
 			}
 
@@ -1065,15 +1061,7 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 				if (next == -1) {
 					sb.setMaxResultsToFetch(null);
 				} else {
-					if (myParams.getOffset() != null) {
-						if (minWanted == 0) {
-							myMaxResultsToFetch = myPagingProvider.getDefaultPageSize();
-						} else {
-							myMaxResultsToFetch = minWanted;
-						}
-					} else {
-						myMaxResultsToFetch = Math.max(next, minWanted);
-					}
+					myMaxResultsToFetch = Math.max(next, minWanted);
 					sb.setMaxResultsToFetch(myMaxResultsToFetch);
 				}
 
@@ -1150,8 +1138,6 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 				throw new InternalErrorException(e);
 			}
 		}
-
-
 	}
 
 	private boolean isWantCount(SearchParameterMap myParams, boolean wantOnlyCount) {
