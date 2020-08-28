@@ -142,6 +142,7 @@ public class RestfulServer extends HttpServlet implements IRestfulServer<Servlet
 	private IPagingProvider myPagingProvider;
 	private Integer myDefaultPageSize;
 	private Integer myMaximumPageSize;
+	private boolean myStatelessPagingDefault = false;
 	private Lock myProviderRegistrationMutex = new ReentrantLock();
 	private Map<String, ResourceBinding> myResourceNameToBinding = new HashMap<>();
 	private IServerAddressStrategy myServerAddressStrategy = new IncomingRequestAddressStrategy();
@@ -698,6 +699,18 @@ public class RestfulServer extends HttpServlet implements IRestfulServer<Servlet
 	 */
 	public void setMaximumPageSize(Integer theMaximumPageSize) {
 		myMaximumPageSize = theMaximumPageSize;
+	}
+
+	@Override
+	public boolean isStatelessPagingDefault() {
+		return myStatelessPagingDefault;
+	}
+
+	/**
+	 * Sets the stateless paging default.
+	 */
+	public void setStatelessPagingDefault(boolean theStatelessPagingDefault) {
+		myStatelessPagingDefault = theStatelessPagingDefault;
 	}
 
 	/**

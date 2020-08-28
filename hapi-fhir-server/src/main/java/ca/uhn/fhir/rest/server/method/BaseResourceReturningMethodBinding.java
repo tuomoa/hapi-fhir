@@ -124,7 +124,7 @@ public abstract class BaseResourceReturningMethodBinding extends BaseMethodBindi
 		List<IBaseResource> resourceList;
 		Integer numTotalResults = theResult.size();
 
-		if (theServer.getPagingProvider() == null) {
+		if (theServer.isStatelessPagingDefault() || theServer.getPagingProvider() == null) {
 			if (theLimit != null) {
 				if (theServer.getMaximumPageSize() != null) {
 					numToReturn = Math.min(theLimit, theServer.getMaximumPageSize());

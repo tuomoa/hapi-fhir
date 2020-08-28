@@ -757,6 +757,13 @@ public abstract class BaseHapiFhirResourceDao<T extends IBaseResource> extends B
 		return theRequestDetails.getServer().getPagingProvider() instanceof DatabaseBackedPagingProvider;
 	}
 
+	protected boolean isStatelessPagingDefault(RequestDetails theRequestDetails) {
+		if (theRequestDetails == null || theRequestDetails.getServer() == null) {
+			return false;
+		}
+		return theRequestDetails.getServer().isStatelessPagingDefault();
+	}
+
 	protected void markResourcesMatchingExpressionAsNeedingReindexing(Boolean theCurrentlyReindexing, String theExpression) {
 		// Avoid endless loops
 		if (Boolean.TRUE.equals(theCurrentlyReindexing)) {
@@ -1247,7 +1254,7 @@ public abstract class BaseHapiFhirResourceDao<T extends IBaseResource> extends B
 			}
 
 			final Integer offset = RestfulServerUtils.tryToExtractNamedParameter(theRequest, Constants.PARAM_OFFSET);
-			if (offset != null || !isPagingProviderDatabaseBacked(theRequest)) {
+			if (isStatelessPagingDefault(theRequest) || offset != null || !isPagingProviderDatabaseBacked(theRequest)) {
 				theParams.setLoadSynchronous(true);
 			}
 		}
