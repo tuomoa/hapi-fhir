@@ -484,63 +484,63 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 				SimpleBundleProvider bundleProvider = new SimpleBundleProvider();
 				bundleProvider.setSize(count.intValue());
 				return bundleProvider;
-			} else {
-				try (IResultIterator resultIter = theSb.createQuery(theParams, searchRuntimeDetails, theRequestDetails, requestPartitionId)) {
-					while (resultIter.hasNext()) {
-						pids.add(resultIter.next());
-						if (theLoadSynchronousUpTo != null && pids.size() >= theLoadSynchronousUpTo) {
-							break;
-						}
-						if (theParams.getLoadSynchronousUpTo() != null && pids.size() >= theParams.getLoadSynchronousUpTo()) {
-							break;
-						}
-					}
-				} catch (IOException e) {
-					ourLog.error("IO failure during database access", e);
-					throw new InternalErrorException(e);
-				}
-
-				JpaPreResourceAccessDetails accessDetails = new JpaPreResourceAccessDetails(pids, () -> theSb);
-				HookParams params = new HookParams()
-					.add(IPreResourceAccessDetails.class, accessDetails)
-					.add(RequestDetails.class, theRequestDetails)
-					.addIfMatchesType(ServletRequestDetails.class, theRequestDetails);
-				JpaInterceptorBroadcaster.doCallHooks(myInterceptorBroadcaster, theRequestDetails, Pointcut.STORAGE_PREACCESS_RESOURCES, params);
-
-				for (int i = pids.size() - 1; i >= 0; i--) {
-					if (accessDetails.isDontReturnResourceAtIndex(i)) {
-						pids.remove(i);
-					}
-				}
-
-				/*
-				 * For synchronous queries, we load all the includes right away
-				 * since we're returning a static bundle with all the results
-				 * pre-loaded. This is ok because syncronous requests are not
-				 * expected to be paged
-				 *
-				 * On the other hand for async queries we load includes/revincludes
-				 * individually for pages as we return them to clients
-				 */
-				final Set<ResourcePersistentId> includedPids = new HashSet<>();
-				includedPids.addAll(theSb.loadIncludes(myContext, myEntityManager, pids, theParams.getRevIncludes(), true, theParams.getLastUpdated(), "(synchronous)", theRequestDetails));
-				includedPids.addAll(theSb.loadIncludes(myContext, myEntityManager, pids, theParams.getIncludes(), false, theParams.getLastUpdated(), "(synchronous)", theRequestDetails));
-				List<ResourcePersistentId> includedPidsList = new ArrayList<>(includedPids);
-
-				List<IBaseResource> resources = new ArrayList<>();
-				theSb.loadResourcesByPid(pids, includedPidsList, resources, false, theRequestDetails);
-
-				// Hook: STORAGE_PRESHOW_RESOURCES
-				resources = InterceptorUtil.fireStoragePreshowResource(resources, theRequestDetails, myInterceptorBroadcaster);
-
-				SimpleBundleProvider bundleProvider = new SimpleBundleProvider(resources);
-
-				if (wantCount) {
-					bundleProvider.setSize(count.intValue());
-				}
-
-				return bundleProvider;
 			}
+
+			try (IResultIterator resultIter = theSb.createQuery(theParams, searchRuntimeDetails, theRequestDetails, requestPartitionId)) {
+				while (resultIter.hasNext()) {
+					pids.add(resultIter.next());
+					if (theLoadSynchronousUpTo != null && pids.size() >= theLoadSynchronousUpTo) {
+						break;
+					}
+					if (theParams.getLoadSynchronousUpTo() != null && pids.size() >= theParams.getLoadSynchronousUpTo()) {
+						break;
+					}
+				}
+			} catch (IOException e) {
+				ourLog.error("IO failure during database access", e);
+				throw new InternalErrorException(e);
+			}
+
+			JpaPreResourceAccessDetails accessDetails = new JpaPreResourceAccessDetails(pids, () -> theSb);
+			HookParams params = new HookParams()
+				.add(IPreResourceAccessDetails.class, accessDetails)
+				.add(RequestDetails.class, theRequestDetails)
+				.addIfMatchesType(ServletRequestDetails.class, theRequestDetails);
+			JpaInterceptorBroadcaster.doCallHooks(myInterceptorBroadcaster, theRequestDetails, Pointcut.STORAGE_PREACCESS_RESOURCES, params);
+
+			for (int i = pids.size() - 1; i >= 0; i--) {
+				if (accessDetails.isDontReturnResourceAtIndex(i)) {
+					pids.remove(i);
+				}
+			}
+
+			/*
+			 * For synchronous queries, we load all the includes right away
+			 * since we're returning a static bundle with all the results
+			 * pre-loaded. This is ok because syncronous requests are not
+			 * expected to be paged
+			 *
+			 * On the other hand for async queries we load includes/revincludes
+			 * individually for pages as we return them to clients
+			 */
+			final Set<ResourcePersistentId> includedPids = new HashSet<>();
+			includedPids.addAll(theSb.loadIncludes(myContext, myEntityManager, pids, theParams.getRevIncludes(), true, theParams.getLastUpdated(), "(synchronous)", theRequestDetails));
+			includedPids.addAll(theSb.loadIncludes(myContext, myEntityManager, pids, theParams.getIncludes(), false, theParams.getLastUpdated(), "(synchronous)", theRequestDetails));
+			List<ResourcePersistentId> includedPidsList = new ArrayList<>(includedPids);
+
+			List<IBaseResource> resources = new ArrayList<>();
+			theSb.loadResourcesByPid(pids, includedPidsList, resources, false, theRequestDetails);
+
+			// Hook: STORAGE_PRESHOW_RESOURCES
+			resources = InterceptorUtil.fireStoragePreshowResource(resources, theRequestDetails, myInterceptorBroadcaster);
+
+			SimpleBundleProvider bundleProvider = new SimpleBundleProvider(resources);
+
+			if (wantCount) {
+				bundleProvider.setSize(count.intValue());
+			}
+
+			return bundleProvider;
 		});
 	}
 
