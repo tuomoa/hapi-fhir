@@ -48,6 +48,7 @@ import ca.uhn.fhir.jpa.model.entity.ResourceTable;
 import ca.uhn.fhir.jpa.model.entity.ResourceTag;
 import ca.uhn.fhir.jpa.model.search.SearchRuntimeDetails;
 import ca.uhn.fhir.jpa.model.search.StorageProcessingMessage;
+import ca.uhn.fhir.jpa.search.DatabaseBackedPagingProvider;
 import ca.uhn.fhir.jpa.search.lastn.IElasticsearchSvc;
 import ca.uhn.fhir.jpa.searchparam.JpaRuntimeSearchParam;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
@@ -1120,6 +1121,13 @@ public class SearchBuilder implements ISearchBuilder {
 
 		}
 
+		private boolean isPagingProviderDatabaseBacked() {
+			if (myRequest == null || myRequest.getServer() == null) {
+				return false;
+			}
+			return myRequest.getServer().getPagingProvider() instanceof DatabaseBackedPagingProvider;
+		}
+
 		private void fetchNext() {
 
 			try {
@@ -1130,7 +1138,7 @@ public class SearchBuilder implements ISearchBuilder {
 				// If we don't have a query yet, create one
 				if (myResultsIterator == null) {
 					if (myMaxResultsToFetch == null) {
-						if (myOffset != null) {
+						if (!isPagingProviderDatabaseBacked() || myOffset != null) {
 							myMaxResultsToFetch = myParams.getCount();
 						} else {
 							myMaxResultsToFetch = myDaoConfig.getFetchSizeDefaultMaximum();

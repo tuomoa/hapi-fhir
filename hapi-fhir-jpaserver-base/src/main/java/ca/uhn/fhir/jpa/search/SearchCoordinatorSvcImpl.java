@@ -538,6 +538,8 @@ public class SearchCoordinatorSvcImpl implements ISearchCoordinatorSvc {
 
 			if (wantCount) {
 				bundleProvider.setSize(count.intValue());
+			} else {
+				bundleProvider.setSize(null);
 			}
 
 			return bundleProvider;
